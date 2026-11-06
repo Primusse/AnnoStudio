@@ -1,0 +1,8 @@
+# 统一换行：文本走 LF，批处理必须保持 CRLF（否则 cmd 解析会出错）
+* text=auto
+
+*.bat text eol=crlf
+
+*.png binary
+*.jpg binary
+*.ico binary

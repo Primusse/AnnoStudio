@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>AnnoStudio · 图像标注</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ── 顶栏 ───────────────────────────────────────────── -->
+  <header class="topbar">
+    <button class="brand" id="homeBtn" title="回到起始页（关闭当前文件夹）">
+      <span class="brand-mark">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><path d="M8.2 16.2 12 7.8l3.8 8.4M9.6 13.6h4.8"/></svg>
+      </span>
+      <span class="brand-name">AnnoStudio</span>
+    </button>
+
+    <div class="folder-chip" id="folderChip" title="当前文件夹">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 7.5a2 2 0 0 1 2-2h3.6l2 2.2h6.4a2 2 0 0 1 2 2v8.3a2 2 0 0 1-2 2h-12a2 2 0 0 1-2-2z"/></svg>
+      <span id="folderName">未打开文件夹</span>
+    </div>
+
+    <div class="label-wrap">
+      <button class="label-chip" id="labelChip" title="标注文件保存位置">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h7.5L18 8.5V20a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M13.5 4v4.5H18"/></svg>
+        <span class="label-chip-key">标注</span>
+        <span class="label-chip-val" id="labelDirVal">同目录</span>
+      </button>
+      <div class="popover" id="labelPop" hidden>
+        <div class="pop-title">标注文件保存位置</div>
+        <div class="pop-path" id="labelPopPath">—</div>
+        <div class="pop-note" id="labelPopNote"></div>
+        <div class="pop-list">
+          <button class="pop-item" data-mode="same">
+            <span class="pop-item-main">与图片同目录</span>
+            <span class="pop-item-sub">VOC 的默认方式，jpg 和 xml 放在一起</span>
+          </button>
+          <button class="pop-item" data-mode="labels">
+            <span class="pop-item-main">图片目录下的 labels/</span>
+            <span class="pop-item-sub">YOLO 的默认方式，也可以给 VOC 用</span>
+          </button>
+          <button class="pop-item" data-mode="custom">
+            <span class="pop-item-main">选择其他文件夹…</span>
+            <span class="pop-item-sub">可以放到任意位置，比如 D:\labels</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="spacer"></div>
+
+    <div class="seg" id="formatSeg" role="tablist" aria-label="标注格式">
+      <button data-format="voc" role="tab" title="Pascal VOC XML">VOC</button>
+      <button data-format="yolo" role="tab" class="on" title="YOLO txt">YOLO</button>
+    </div>
+
+    <span class="save-state" id="saveState" data-state="idle"><i></i><span>就绪</span></span>
+
+    <button class="btn ghost" id="exportBtn" title="把当前格式的标注导出为 YOLO 数据集">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v10m0 0 4-4m-4 4-4-4M4 17v1.5a1.5 1.5 0 0 0 1.5 1.5h13A1.5 1.5 0 0 0 20 18.5V17"/></svg>
+      导出
+    </button>
+    <button class="btn ghost icon" id="helpBtn" title="快捷键 (?)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.3c-.6.25-1 .8-1 1.5v.3"/><circle cx="12" cy="16.6" r=".9" fill="currentColor" stroke="none"/></svg>
+    </button>
+    <button class="btn primary" id="openBtn">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 7.5a2 2 0 0 1 2-2h3.6l2 2.2h6.4a2 2 0 0 1 2 2v8.3a2 2 0 0 1-2 2h-12a2 2 0 0 1-2-2z"/></svg>
+      打开文件夹
+    </button>
+  </header>
+
+  <!-- ── 左侧：图像列表 ─────────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="side-head">
+      <div class="side-title">
+        <span>图像</span>
+        <span class="badge" id="imgCount">0</span>
+      </div>
+      <div class="side-progress" title="已标注 / 总数">
+        <span id="doneCount">0</span> 已标注
+      </div>
+    </div>
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 3.5 3.5"/></svg>
+      <input id="searchInput" type="search" placeholder="筛选文件名…" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="filter-row">
+      <button class="filter-pill" id="onlyUnlabeled" title="只看还没标注的图片 (U)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4.5l3 1.8"/></svg>
+        只看未标注
+        <b id="unlabeledCount">0</b>
+      </button>
+    </div>
+    <div class="thumb-list" id="thumbList" tabindex="-1"></div>
+    <div class="side-foot">
+      <label class="switch">
+        <input type="checkbox" id="recursiveChk">
+        <span class="track"><span class="knob"></span></span>
+        <span class="switch-label">包含子文件夹</span>
+      </label>
+    </div>
+  </aside>
+
+  <!-- ── 中间：画布 ─────────────────────────────────────── -->
+  <main class="stage" id="stage">
+    <canvas id="canvas"></canvas>
+
+    <div class="hud hud-meta" id="hudMeta" hidden>
+      <span id="metaName">—</span>
+      <span class="dot-sep"></span>
+      <span id="metaSize">—</span>
+      <span class="ro-badge" id="roBadge" hidden>多边形 · 只读</span>
+    </div>
+
+    <div class="hud hud-nav" id="hudNav" hidden>
+      <button class="icon-btn" id="prevBtn" title="上一张 (A / ←)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 6-6 6 6 6"/></svg>
+      </button>
+      <span class="counter"><b id="navIndex">0</b><span>/</span><span id="navTotal">0</span></span>
+      <button class="icon-btn" id="nextBtn" title="下一张 (D / →)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9.5 6 6 6-6 6"/></svg>
+      </button>
+    </div>
+
+    <div class="hud hud-zoom" id="hudZoom" hidden>
+      <button class="icon-btn" id="zoomOut" title="缩小 (−)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h12"/></svg>
+      </button>
+      <button class="zoom-val" id="zoomVal" title="点击恢复 100% (Ctrl+1)">100%</button>
+      <button class="icon-btn" id="zoomIn" title="放大 (+)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6v12M6 12h12"/></svg>
+      </button>
+      <span class="hud-sep"></span>
+      <button class="icon-btn" id="zoomFit" title="适应窗口 (F)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V5.5A1.5 1.5 0 0 1 5.5 4H9M15 4h3.5A1.5 1.5 0 0 1 20 5.5V9M20 15v3.5a1.5 1.5 0 0 1-1.5 1.5H15M9 20H5.5A1.5 1.5 0 0 1 4 18.5V15"/></svg>
+      </button>
+    </div>
+
+    <div class="empty" id="empty">
+      <div class="empty-card">
+        <div class="empty-mark">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><path d="M8.2 16.2 12 7.8l3.8 8.4M9.6 13.6h4.8"/></svg>
+        </div>
+        <h1>打开一个图片文件夹</h1>
+        <p>支持 VOC / YOLO 标注，自动读取已有标注文件。</p>
+        <div class="empty-actions">
+          <button class="btn primary lg" id="emptyPick">浏览文件夹…</button>
+        </div>
+        <div class="path-row">
+          <input id="pathInput" type="text" placeholder="或粘贴文件夹路径，例如 D:\datasets\imgs" spellcheck="false">
+          <button class="btn" id="pathOpen">打开</button>
+        </div>
+        <div class="recent" id="recentWrap" hidden>
+          <span class="recent-title">最近打开</span>
+          <div class="recent-list" id="recentList"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="busy" id="busy" hidden><span class="spinner"></span><span id="busyText">读取中…</span></div>
+  </main>
+
+  <!-- ── 右侧：标注检视 ─────────────────────────────────── -->
+  <aside class="inspector">
+    <section class="insp-section">
+      <div class="insp-head">
+        <span>类别</span>
+        <div class="insp-tools">
+          <span class="pf-wrap">
+            <button class="mini-btn" id="classFileBtn" title="指定类别清单文件（classes.txt）">文件</button>
+            <div class="popover pf-pop" id="classFilePop" hidden>
+              <div class="pop-title">类别清单文件</div>
+              <div class="pop-path" id="classFilePath">—</div>
+              <div class="pop-note" id="classFileNote"></div>
+              <div class="pop-list">
+                <button class="pop-item" id="classFilePick">
+                  <span class="pop-item-main">选择文件…</span>
+                  <span class="pop-item-sub">一行一个类别名的 txt</span>
+                </button>
+                <button class="pop-item" id="classFileReset">
+                  <span class="pop-item-main">恢复自动查找</span>
+                  <span class="pop-item-sub">图片根目录 / labels 下的 classes.txt</span>
+                </button>
+              </div>
+            </div>
+          </span>
+          <button class="mini-btn" id="classMapBtn" title="按序号填写类别名（YOLO 缺 classes.txt 时用）">映射</button>
+          <button class="mini-btn" id="classRescanBtn" title="重新扫描已有标注里的类别">重扫</button>
+        </div>
+      </div>
+      <div class="chips" id="classChips"></div>
+      <div class="class-add">
+        <input id="classInput" type="text" placeholder="新增类别…" spellcheck="false" maxlength="40">
+        <button class="btn mini" id="classAdd" title="添加类别">+</button>
+      </div>
+    </section>
+
+    <section class="insp-section grow">
+      <div class="insp-head">
+        <span>本图标注</span>
+        <span class="badge soft" id="boxCount">0</span>
+      </div>
+      <div class="box-list" id="boxList"></div>
+    </section>
+
+    <section class="insp-section">
+      <div class="insp-head">
+        <span id="selTitle">选中框</span>
+        <span class="hint">Shift 点选可多选</span>
+      </div>
+      <div class="coords" id="coords">
+        <div><label>X</label><span id="cx1">—</span></div>
+        <div><label>Y</label><span id="cy1">—</span></div>
+        <div><label>W</label><span id="cw">—</span></div>
+        <div><label>H</label><span id="ch">—</span></div>
+      </div>
+      <div class="actions">
+        <button class="btn full" id="copyPrevBtn" title="把上一张的标注复制过来 (C)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>
+          复制上一张
+        </button>
+      </div>
+      <div class="actions">
+        <button class="btn danger full" id="delBtn" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 7h15M9.5 7V5.2A1.2 1.2 0 0 1 10.7 4h2.6a1.2 1.2 0 0 1 1.2 1.2V7m-7 0 .8 11.3A1.7 1.7 0 0 0 10 20h4a1.7 1.7 0 0 0 1.7-1.7L16.5 7"/></svg>
+          <span id="delLabel">删除 (Del)</span>
+        </button>
+      </div>
+    </section>
+  </aside>
+
+</div>
+
+<div id="toasts" class="toasts"></div>
+
+<!-- ── 类别名映射 ───────────────────────────────────────── -->
+<div class="modal" id="classMapModal" hidden>
+  <div class="modal-card small">
+    <header>
+      <h2>类别名映射</h2>
+      <button class="icon-btn" id="classMapClose" title="关闭 (Esc)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+      </button>
+    </header>
+    <p class="modal-note">
+      YOLO 的 txt 只存类别序号，名字靠这份顺序表：第 1 行 = 0 号类别，第 2 行 = 1 号……
+      保存后会写进 <code>classes.txt</code>，并立刻按新名字刷新画面。
+    </p>
+    <textarea id="classMapInput" spellcheck="false" placeholder="person&#10;car&#10;dog"></textarea>
+    <footer class="modal-actions">
+      <button class="btn" id="classMapCancel">取消</button>
+      <button class="btn primary" id="classMapSave">保存并刷新</button>
+    </footer>
+  </div>
+</div>
+
+<!-- ── 快捷键面板 ───────────────────────────────────────── -->
+<div class="modal" id="helpModal" hidden>
+  <div class="modal-card">
+    <header>
+      <h2>快捷操作</h2>
+      <button class="icon-btn" id="helpClose" title="关闭 (Esc)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+      </button>
+    </header>
+    <div class="keys">
+      <div class="key-group">
+        <h3>绘制与编辑</h3>
+        <div class="key-row"><span>在空白处拖拽</span><kbd>新建框</kbd></div>
+        <div class="key-row"><span>点击框 / 侧栏条目</span><kbd>选中</kbd></div>
+        <div class="key-row"><span>加选 / 减选</span><kbd>Shift 点击</kbd></div>
+        <div class="key-row"><span>全选本图</span><kbd>Ctrl A</kbd></div>
+        <div class="key-row"><span>拖动框体</span><kbd>移动</kbd></div>
+        <div class="key-row"><span>拖动 8 个控制点</span><kbd>调整大小</kbd></div>
+        <div class="key-row"><span>复制 / 粘贴框</span><kbd>Ctrl C · Ctrl V</kbd></div>
+        <div class="key-row"><span>复制上一张的标注</span><kbd>C</kbd></div>
+        <div class="key-row"><span>删除选中</span><kbd>Del</kbd></div>
+        <div class="key-row"><span>撤销 / 重做</span><kbd>Ctrl Z · Ctrl Y</kbd></div>
+        <div class="key-row"><span>取消绘制 / 取消选中</span><kbd>Esc</kbd></div>
+      </div>
+      <div class="key-group">
+        <h3>浏览与视图</h3>
+        <div class="key-row"><span>上一张 / 下一张</span><kbd>A · D</kbd></div>
+        <div class="key-row"><span>上一张 / 下一张</span><kbd>← · →</kbd></div>
+        <div class="key-row"><span>跳到下一张未标注</span><kbd>N</kbd></div>
+        <div class="key-row"><span>只看未标注</span><kbd>U</kbd></div>
+        <div class="key-row"><span>滚轮</span><kbd>缩放</kbd></div>
+        <div class="key-row"><span>右键 / 中键 / 空格拖拽</span><kbd>平移画面</kbd></div>
+        <div class="key-row"><span>适应窗口</span><kbd>F</kbd></div>
+        <div class="key-row"><span>实际大小</span><kbd>Ctrl 1</kbd></div>
+        <div class="key-row"><span>切换类别</span><kbd>1 … 9</kbd></div>
+      </div>
+    </div>
+    <footer>标注会在停止操作约 0.6 秒后自动保存，切图前也会强制保存。</footer>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# 虚拟环境（工具本身零依赖，不需要提交）
+.venv/
+venv/
+
+# 工具在数据集目录里生成的本地配置
+.annostudio.json
+
+# 备份 / 临时文件
+*.bak
+*.bak-*
+*.tmp-annex
+
+# 系统文件
+.DS_Store
+Thumbs.db
+desktop.ini
