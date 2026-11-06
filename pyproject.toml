@@ -16,6 +16,7 @@ classifiers = [
     "Environment :: Web Environment",
     "Operating System :: Microsoft :: Windows",
     "Topic :: Scientific/Engineering :: Image Recognition",
+    "License :: OSI Approved :: MIT License",
 ]
 
 [project.scripts]
