@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "annostudio"
+version = "2.0.0"
+description = "零依赖的本地图像标注工具：浏览器界面，支持 Pascal VOC 与 YOLO，自动保存与撤销"
+readme = "README.md"
+requires-python = ">=3.8"
+# 真的一个第三方依赖都没有，只用标准库
+dependencies = []
+keywords = ["annotation", "labeling", "yolo", "voc", "pascal-voc", "image", "dataset"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Environment :: Web Environment",
+    "Operating System :: Microsoft :: Windows",
+    "Topic :: Scientific/Engineering :: Image Recognition",
+]
+
+[project.scripts]
+annostudio = "annostudio.cli:main"
+
+[tool.setuptools]
+packages = ["annostudio"]
+
+[tool.setuptools.package-data]
+annostudio = ["web/*"]
